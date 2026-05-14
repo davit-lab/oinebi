@@ -298,7 +298,7 @@ function BookingPage() {
                   className={`p-4 rounded-2xl border-2 text-left flex flex-col gap-1 transition-all ${!cart.cityId ? 'bg-primary/10 border-primary shadow-soft' : 'bg-card border-border hover:border-primary/40'}`}
                 >
                   <span className="text-xs font-bold text-primary">{!cart.cityId && <Check size={10} className="inline mr-1" />}{lang === 'ka' ? 'თბილისი' : 'Tbilisi'}</span>
-                  <span className="text-[10px] text-muted-foreground font-medium">{lang === 'ka' ? 'მგზავრობის გარეშე' : 'No travel fee'} · 0₾</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">0₾</span>
                 </button>
                 {cities.map((c) => (
                   <button
@@ -307,7 +307,7 @@ function BookingPage() {
                     className={`p-4 rounded-2xl border-2 text-left flex flex-col gap-1 transition-all ${cart.cityId === c.id ? 'bg-primary/10 border-primary shadow-soft' : 'bg-card border-border hover:border-primary/40'}`}
                   >
                     <span className="text-xs font-bold text-primary">{cart.cityId === c.id && <Check size={10} className="inline mr-1" />}{c.name}</span>
-                    <span className="text-[10px] text-muted-foreground font-medium">{lang === 'ka' ? 'მგზავრობა' : 'Travel fee'}: +{c.fee}₾</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">+{c.fee}₾</span>
                   </button>
                 ))}
               </div>

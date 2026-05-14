@@ -524,11 +524,11 @@ function BookingsList() {
   };
 
   const exportCSV = () => {
-    const header = ['Created','Status','Date','Time','Name','Phone','Email','Address','Comments','Program','Animators','Services','Total'];
+    const header = ['Created','Status','Date','Time','Name','Phone','Email','Address','City','Travel Fee','Comments','Program','Animators','Services','Total'];
     const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [header.join(',')].concat(rows.map((b: any) => [
       new Date(b.created_at).toISOString(), b.status, b.booking_date, b.time_slot?.time || '',
-      b.customer_name, b.customer_phone, b.customer_email || '', b.address || '', (b.comments || '').replace(/\n/g, ' '),
+      b.customer_name, b.customer_phone, b.customer_email || '', b.address || '', b.city?.name || 'თბილისი', b.city?.fee ?? 0, (b.comments || '').replace(/\n/g, ' '),
       b.program?.name || '',
       (b.animators || []).map((a: any) => `${a.name}x${a.quantity}(${a.hours}h)`).join('; '),
       (b.services || []).map((s: any) => s.name).join('; '),
@@ -562,7 +562,7 @@ function BookingsList() {
             <summary className="p-4 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-2 hover:bg-muted">
               <div className="flex flex-col">
                 <span className="font-bold">{b.customer_name} · {b.customer_phone}</span>
-                <span className="text-xs text-muted-foreground">{b.booking_date} · {b.time_slot?.time || '-'} · {b.address}</span>
+                <span className="text-xs text-muted-foreground">{b.booking_date} · {b.time_slot?.time || '-'} · {b.city?.name ? `${b.city.name} (+${b.city.fee}₾)` : 'თბილისი'}</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${b.status === 'confirmed' ? 'bg-primary/15 text-primary' : b.status === 'cancelled' ? 'bg-destructive/15 text-destructive' : 'bg-accent/15 text-accent-foreground'}`}>{b.status}</span>
@@ -573,6 +573,7 @@ function BookingsList() {
               <div><b>Address:</b> {b.address || '—'}</div>
               {b.customer_email && <div><b>Email:</b> {b.customer_email}</div>}
               {b.comments && <div><b>Comments:</b> {b.comments}</div>}
+              {b.city?.name && <div><b>City / Travel fee:</b> {b.city.name} · +{b.city.fee}₾</div>}
               {b.program?.name && <div><b>Program:</b> {b.program.name}</div>}
               {b.animators?.length > 0 && <div><b>Animators:</b> {b.animators.map((a: any) => `${a.name}×${a.quantity} (${a.hours}h)`).join(', ')}</div>}
               {b.services?.length > 0 && <div><b>Services:</b> {b.services.map((s: any) => s.name).join(', ')}</div>}
