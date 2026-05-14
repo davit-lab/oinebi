@@ -75,10 +75,24 @@ function BookingPage() {
   );
   const total = Math.round(territoryPrice + animatorsTotal + servicesTotal);
 
-  const setAnimQty = (a: any, qty: number) => {
+  // Clear characters that exceed new program limits when program changes
+  useEffect(() => {
+    if (!selectedProgram) return;
+    Object.values(cart.animators).forEach((entry: any) => {
+      const isHost = hosts.some((h: any) => h.id === entry.id);
+      const limit = isHost ? maxHosts : maxAnimators;
+      if (limit === 0) {
+        cart.removeAnimator(entry.id);
+      }
+    });
+  }, [cart.programId]);
+
+  const setAnimQty = (a: any, qty: number, isHost = false) => {
     const existing = cart.animators[a.id];
     const currentQty = existing?.quantity || 0;
-    if (qty > currentQty && maxAnimators !== null && totalSelectedAnimators >= maxAnimators) return;
+    const limit = isHost ? maxHosts : maxAnimators;
+    const currentTotal = isHost ? totalSelectedHosts : totalSelectedAnimators;
+    if (qty > currentQty && currentTotal >= limit) return;
     cart.setAnimator({
       id: a.id,
       name: a.name,
@@ -91,13 +105,13 @@ function BookingPage() {
   const setAnimHours = (a: any, hours: number) => {
     const existing = cart.animators[a.id];
     if (!existing) return;
-    const max = a.maxHours ? Number(a.maxHours) : 24;
+    const max = Math.min(a.maxHours ? Number(a.maxHours) : 24, progMaxHours);
     cart.setAnimator({ ...existing, hours: Math.min(max, Math.max(1, hours)) });
   };
 
   const submit = async () => {
-    if (!cart.date || !cart.timeSlotTime || !customer.name || !customer.phone || !customer.address) {
-      toast.error(lang === 'ka' ? 'შეავსეთ აუცილებელი ველები (სახელი, ტელეფონი, მისამართი, თარიღი, დრო)' : 'Fill required fields (name, phone, address, date, time)');
+    if (!cart.date || !cart.timeSlotTime || !customer.name || !customer.phone) {
+      toast.error(lang === 'ka' ? 'შეავსეთ აუცილებელი ველები: სახელი, ტელეფონი, თარიღი და დრო' : 'Fill required fields: name, phone, date and time');
       return;
     }
     setSubmitting(true);
@@ -215,7 +229,7 @@ function BookingPage() {
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">{t.ui.book}</span>
             <h1 className="font-display text-5xl md:text-7xl text-primary">{lang === 'ka' ? 'დაჯავშნა' : 'Booking & Calculator'}</h1>
             <p className="text-muted-foreground font-semibold max-w-2xl">
-              {lang === 'ka' ? 'აირჩიეთ თარიღი,პროგრამები,სერვისები,გმირები,ანიმატორები  და სერვისები — და იხილეთ ჯამი.' : 'Pick date, animators with hours and services — price auto-calculated.'}
+              {lang === 'ka' ? 'აირჩიეთ პროგრამა, ანიმატორები, გმირები, სერვისები და თარიღი — ფასი ავტომატურად ითვლება.' : 'Pick a program, animators, heroes, services and date — price auto-calculated.'}
             </p>
           </div>
 
@@ -307,88 +321,38 @@ function BookingPage() {
                   <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground">{lang === 'ka' ? 'მაქ. საათი' : 'Max hours'}: {progMaxHours}{lang === 'ka' ? 'სთ' : 'h'}</span>
                 </div>
 
-                {/* Heroes (animators) */}
-                {progAllowAnimators && maxAnimators !== null && maxAnimators > 0 && (
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-primary mb-3">{lang === 'ka' ? 'გმირები / პერსონაჟები' : 'Heroes / Characters'}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {animators.map((a: any) => {
-                        const sel = cart.animators[a.id];
-                        const active = !!sel;
-                        const atMax = maxAnimators !== null && totalSelectedAnimators >= maxAnimators;
-                        return (
-                          <div key={a.id} className={`p-4 rounded-3xl border-2 flex gap-4 transition-all ${active ? 'bg-primary/5 border-primary shadow-soft' : 'bg-card border-border'}`}>
-                            <img src={a.image} alt={a.name} className="w-20 h-20 rounded-2xl object-cover flex-shrink-0" />
-                            <div className="flex-1 flex flex-col gap-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <h3 className="font-display text-base leading-tight">{a.name}</h3>
-                                  <p className="text-xs text-muted-foreground">{a.category}</p>
-                                </div>
-                                {active && <span className="bg-primary text-primary-foreground rounded-full p-1 flex-shrink-0"><Check size={12} /></span>}
-                              </div>
-                              <div className="mt-auto flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-                                  <button onClick={() => setAnimQty(a, (sel?.quantity || 0) - 1)} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center"><Minus size={12} /></button>
-                                  <span className="w-7 text-center font-display">{sel?.quantity || 0}</span>
-                                  <button onClick={() => setAnimQty(a, (sel?.quantity || 0) + 1)} disabled={atMax} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"><Plus size={12} /></button>
-                                </div>
-                                {active && (
-                                  <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-                                    <button onClick={() => setAnimHours(a, sel.hours - 1)} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center"><Minus size={12} /></button>
-                                    <span className="w-10 text-center font-display text-xs">{sel.hours}{lang === 'ka' ? 'სთ' : 'h'}</span>
-                                    <button onClick={() => setAnimHours(a, sel.hours + 1)} disabled={sel.hours >= progMaxHours} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"><Plus size={12} /></button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                {/* Animators (hosts) — first */}
+                {progAllowHosts && maxHosts > 0 && hosts.length > 0 && (
+                  <CharacterGroup
+                    label={lang === 'ka' ? 'ანიმატორები / წამყვანები' : 'Animators / Hosts'}
+                    color="accent"
+                    items={hosts}
+                    cartAnimators={cart.animators}
+                    atMax={totalSelectedHosts >= maxHosts}
+                    maxTotal={maxHosts}
+                    selectedTotal={totalSelectedHosts}
+                    progMaxHours={progMaxHours}
+                    lang={lang}
+                    onQty={(a, qty) => setAnimQty(a, qty, true)}
+                    onHours={setAnimHours}
+                  />
                 )}
 
-                {/* Animators (hosts) */}
-                {progAllowHosts && maxHosts !== null && maxHosts > 0 && hosts.length > 0 && (
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-accent mb-3">{lang === 'ka' ? 'ანიმატორები / წამყვანები' : 'Animators / Hosts'}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {hosts.map((a: any) => {
-                        const sel = cart.animators[a.id];
-                        const active = !!sel;
-                        const atMax = maxHosts !== null && totalSelectedHosts >= maxHosts;
-                        return (
-                          <div key={a.id} className={`p-4 rounded-3xl border-2 flex gap-4 transition-all ${active ? 'bg-accent/5 border-accent shadow-soft' : 'bg-card border-border'}`}>
-                            <img src={a.image} alt={a.name} className="w-20 h-20 rounded-2xl object-cover flex-shrink-0" />
-                            <div className="flex-1 flex flex-col gap-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <h3 className="font-display text-base leading-tight">{a.name}</h3>
-                                  <p className="text-xs text-muted-foreground">{a.category}</p>
-                                </div>
-                                {active && <span className="bg-accent text-white rounded-full p-1 flex-shrink-0"><Check size={12} /></span>}
-                              </div>
-                              <div className="mt-auto flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-                                  <button onClick={() => setAnimQty(a, (sel?.quantity || 0) - 1)} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center"><Minus size={12} /></button>
-                                  <span className="w-7 text-center font-display">{sel?.quantity || 0}</span>
-                                  <button onClick={() => setAnimQty(a, (sel?.quantity || 0) + 1)} disabled={atMax} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"><Plus size={12} /></button>
-                                </div>
-                                {active && (
-                                  <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-                                    <button onClick={() => setAnimHours(a, sel.hours - 1)} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center"><Minus size={12} /></button>
-                                    <span className="w-10 text-center font-display text-xs">{sel.hours}{lang === 'ka' ? 'სთ' : 'h'}</span>
-                                    <button onClick={() => setAnimHours(a, sel.hours + 1)} disabled={sel.hours >= progMaxHours} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"><Plus size={12} /></button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                {/* Heroes (animators) — second */}
+                {progAllowAnimators && maxAnimators > 0 && (
+                  <CharacterGroup
+                    label={lang === 'ka' ? 'გმირები / პერსონაჟები' : 'Heroes / Characters'}
+                    color="primary"
+                    items={animators}
+                    cartAnimators={cart.animators}
+                    atMax={totalSelectedAnimators >= maxAnimators}
+                    maxTotal={maxAnimators}
+                    selectedTotal={totalSelectedAnimators}
+                    progMaxHours={progMaxHours}
+                    lang={lang}
+                    onQty={(a, qty) => setAnimQty(a, qty, false)}
+                    onHours={setAnimHours}
+                  />
                 )}
 
                 {!progAllowAnimators && !progAllowHosts && (
@@ -478,7 +442,7 @@ function BookingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><Label>{t.ui.name} *</Label><Input value={customer.name} onChange={(v) => setCustomer({ ...customer, name: v })} /></div>
               <div><Label>{t.ui.phone} *</Label><Input value={customer.phone} onChange={(v) => setCustomer({ ...customer, phone: v })} placeholder="5XX XX XX XX" /></div>
-              <div className="md:col-span-2"><Label>{lang === 'ka' ? 'მისამართი' : 'Address'} *</Label><Input value={customer.address} onChange={(v) => setCustomer({ ...customer, address: v })} placeholder={lang === 'ka' ? 'ქალაქი, ქუჩა, ნომერი, ბინა' : 'City, street, number, apt'} /></div>
+              <div className="md:col-span-2"><Label>{lang === 'ka' ? 'მისამართი' : 'Address'}</Label><Input value={customer.address} onChange={(v) => setCustomer({ ...customer, address: v })} placeholder={lang === 'ka' ? 'ქალაქი, ქუჩა, ნომერი, ბინა' : 'City, street, number, apt'} /></div>
               <div className="md:col-span-2"><Label>{t.ui.email}</Label><Input value={customer.email} onChange={(v) => setCustomer({ ...customer, email: v })} /></div>
               <div className="md:col-span-2"><Label>{t.ui.comments}</Label>
                 <textarea value={customer.comments} onChange={(e) => setCustomer({ ...customer, comments: e.target.value })} className="w-full p-4 rounded-2xl bg-input border border-border font-medium focus:border-primary outline-none min-h-[100px]" />
@@ -505,15 +469,19 @@ function BookingPage() {
                 const p = programs.find(pr => pr.id === cart.programId);
                 return p ? <CartRow label={t.ui.program} sub={`${p.name} · ${p.ageRange}`} price="0₾" /> : null;
               })()}
-              {Object.values(cart.animators).map((a) => (
-                <CartRow
-                  key={a.id}
-                  label={t.ui.animator}
-                  sub={`${a.name} × ${a.quantity} · ${a.hours}${lang === 'ka' ? 'სთ' : 'h'}`}
-                  price={`${Math.round(a.pricePerHour * a.quantity * a.hours * multiplier)}₾`}
-                  onRemove={() => cart.removeAnimator(a.id)}
-                />
-              ))}
+              {Object.values(cart.animators).map((a) => {
+                const isHost = hosts.some((h: any) => h.id === a.id);
+                const label = isHost ? (lang === 'ka' ? 'ანიმატორი' : 'Animator') : (lang === 'ka' ? 'გმირი' : 'Hero');
+                return (
+                  <CartRow
+                    key={a.id}
+                    label={label}
+                    sub={`${a.name} × ${a.quantity} · ${a.hours}${lang === 'ka' ? 'სთ' : 'h'}`}
+                    price={`${Math.round(a.pricePerHour * a.quantity * a.hours * multiplier)}₾`}
+                    onRemove={() => cart.removeAnimator(a.id)}
+                  />
+                );
+              })}
               {Object.values(cart.services).map((s) => {
                 const q = s.quantity || 1;
                 const h = s.hours || 1;
@@ -579,6 +547,67 @@ function Label({ children }: { children: React.ReactNode }) {
 function Input({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="w-full p-4 rounded-2xl bg-input border border-border font-medium focus:border-primary outline-none" />;
 }
+function CharacterGroup({
+  label, color, items, cartAnimators, atMax, maxTotal, selectedTotal, progMaxHours, lang, onQty, onHours,
+}: {
+  label: string; color: 'primary' | 'accent';
+  items: any[]; cartAnimators: Record<string, any>;
+  atMax: boolean; maxTotal: number; selectedTotal: number;
+  progMaxHours: number; lang: string;
+  onQty: (a: any, qty: number) => void;
+  onHours: (a: any, hours: number) => void;
+}) {
+  const c = color === 'primary' ? { bg: 'bg-primary/5', border: 'border-primary', shadow: 'shadow-soft', check: 'bg-primary text-primary-foreground', label: 'text-primary' } : { bg: 'bg-accent/5', border: 'border-accent', shadow: 'shadow-soft', check: 'bg-accent text-white', label: 'text-accent' };
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <p className={`text-xs font-black uppercase tracking-widest ${c.label}`}>{label}</p>
+        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${atMax ? 'bg-destructive/10 text-destructive' : `bg-${color}/10 ${c.label}`}`}>
+          {selectedTotal}/{maxTotal}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {items.map((a: any) => {
+          const sel = cartAnimators[a.id];
+          const active = !!sel;
+          const maxH = Math.min(a.maxHours ? Number(a.maxHours) : 24, progMaxHours);
+          return (
+            <div key={a.id} className={`p-4 rounded-3xl border-2 flex gap-4 transition-all ${active ? `${c.bg} ${c.border} ${c.shadow}` : 'bg-card border-border hover:border-border/80'}`}>
+              <img src={a.image} alt={a.name} className="w-20 h-20 rounded-2xl object-cover flex-shrink-0" />
+              <div className="flex-1 flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-display text-base leading-tight">{a.name}</h3>
+                    <p className="text-xs text-muted-foreground">{a.category}</p>
+                  </div>
+                  {active && <span className={`${c.check} rounded-full p-1 flex-shrink-0`}><Check size={12} /></span>}
+                </div>
+                <div className="mt-auto flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
+                    <button onClick={() => onQty(a, (sel?.quantity || 0) - 1)} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center"><Minus size={12} /></button>
+                    <span className="w-7 text-center font-display">{sel?.quantity || 0}</span>
+                    <button onClick={() => onQty(a, (sel?.quantity || 0) + 1)} disabled={atMax} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"><Plus size={12} /></button>
+                  </div>
+                  {active && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
+                        <button onClick={() => onHours(a, sel.hours - 1)} disabled={sel.hours <= 1} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30"><Minus size={12} /></button>
+                        <span className="w-10 text-center font-display text-xs">{sel.hours}{lang === 'ka' ? 'სთ' : 'h'}</span>
+                        <button onClick={() => onHours(a, sel.hours + 1)} disabled={sel.hours >= maxH} className="w-7 h-7 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"><Plus size={12} /></button>
+                      </div>
+                      <span className="text-[9px] text-muted-foreground">max {maxH}{lang === 'ka' ? 'სთ' : 'h'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CartRow({ label, sub, price, onRemove }: { label: string; sub: string; price: string; onRemove?: () => void }) {
   return (
     <div className="flex justify-between items-start gap-2 pb-3 border-b border-border last:border-0">
