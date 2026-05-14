@@ -22,6 +22,8 @@ export const ASSETS = {
   blockedSlots: {} as Record<string, string[]>,
   // Cities with travel fee. Admin-managed.
   cities: [] as { id: string; name: string; fee: number; enabled: boolean }[],
+  // Promo codes. Admin-managed.
+  promoCodes: [] as { id: string; code: string; type: 'percent' | 'fixed'; value: number; enabled: boolean }[],
 };
 
 export const TRANSLATIONS_VERSION = 2;

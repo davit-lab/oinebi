@@ -21,6 +21,9 @@ function BookingPage() {
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
   const [selectedEmoji, setSelectedEmoji] = useState('');
   const [selectedAnimator, setSelectedAnimator] = useState<any>(null);
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; type: 'percent' | 'fixed'; value: number } | null>(null);
+  const [promoError, setPromoError] = useState('');
 
   const animators = (t.animators || []) as any[];
   const hosts = (t.hosts || []) as any[];
@@ -41,6 +44,19 @@ function BookingPage() {
   const cities = ((assets as any)?.cities || []).filter((c: any) => c.enabled !== false) as { id: string; name: string; fee: number; enabled: boolean }[];
   const selectedCity = cities.find((c) => c.id === cart.cityId) || null;
   const cityFee = selectedCity?.fee || 0;
+  const promoCodes = ((assets as any)?.promoCodes || []) as { id: string; code: string; type: 'percent' | 'fixed'; value: number; enabled: boolean }[];
+
+  const applyPromo = () => {
+    const code = promoInput.trim().toUpperCase();
+    const found = promoCodes.find((p) => p.code.toUpperCase() === code && p.enabled);
+    if (!found) {
+      setPromoError(lang === 'ka' ? 'პრომოკოდი არასწორია ან არააქტიურია' : 'Invalid or inactive promo code');
+      setAppliedPromo(null);
+      return;
+    }
+    setAppliedPromo({ code: found.code, type: found.type, value: found.value });
+    setPromoError('');
+  };
 
   // Load booked slots whenever date changes
   useEffect(() => {
@@ -77,7 +93,13 @@ function BookingPage() {
     }, 0),
     [cart.services],
   );
-  const total = Math.round(territoryPrice + cityFee + programPrice + animatorsTotal + servicesTotal);
+  const subtotal = Math.round(territoryPrice + cityFee + programPrice + animatorsTotal + servicesTotal);
+  const discountAmount = appliedPromo
+    ? appliedPromo.type === 'percent'
+      ? Math.round(subtotal * appliedPromo.value / 100)
+      : Math.min(appliedPromo.value, subtotal)
+    : 0;
+  const total = Math.max(0, subtotal - discountAmount);
 
   // Clear characters that exceed new program limits when program changes
   useEffect(() => {
@@ -151,6 +173,7 @@ function BookingPage() {
       services: Object.values(cart.services) as any,
       total_price: total,
       city: selectedCity ? { id: selectedCity.id, name: selectedCity.name, fee: selectedCity.fee } : null,
+      promo_code: appliedPromo ? { code: appliedPromo.code, type: appliedPromo.type, value: appliedPromo.value, discount: discountAmount } : null,
     } as any]);
     setSubmitting(false);
     if (error) {
@@ -541,9 +564,47 @@ function BookingPage() {
               )}
             </div>
 
-            <div className="border-t-2 border-dashed border-border pt-4 flex justify-between items-end">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">{t.ui.total}</span>
-              <span className="font-display text-4xl text-primary">{total}₾</span>
+            {/* Promo code input */}
+            <div className="flex gap-2 mt-1">
+              <input
+                value={promoInput}
+                onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError(''); }}
+                onKeyDown={(e) => e.key === 'Enter' && applyPromo()}
+                placeholder={lang === 'ka' ? 'პრომოკოდი' : 'Promo code'}
+                className="flex-1 px-3 py-2 rounded-xl bg-input border border-border text-xs font-bold uppercase focus:border-primary outline-none"
+              />
+              <button
+                onClick={applyPromo}
+                className="px-3 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors"
+              >
+                {lang === 'ka' ? 'გამოყენება' : 'Apply'}
+              </button>
+            </div>
+            {promoError && <p className="text-[10px] text-destructive font-bold -mt-1">{promoError}</p>}
+            {appliedPromo && (
+              <div className="flex items-center justify-between text-xs -mt-1">
+                <span className="text-primary font-bold">🎟 {appliedPromo.code} — {appliedPromo.type === 'percent' ? `-${appliedPromo.value}%` : `-${appliedPromo.value}₾`}</span>
+                <button onClick={() => { setAppliedPromo(null); setPromoInput(''); }} className="text-destructive font-bold">✕</button>
+              </div>
+            )}
+
+            <div className="border-t-2 border-dashed border-border pt-4 flex flex-col gap-1">
+              {appliedPromo && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{lang === 'ka' ? 'სულ' : 'Subtotal'}</span>
+                  <span>{subtotal}₾</span>
+                </div>
+              )}
+              {appliedPromo && (
+                <div className="flex justify-between text-xs text-primary font-bold">
+                  <span>{lang === 'ka' ? 'ფასდაკლება' : 'Discount'}</span>
+                  <span>−{discountAmount}₾</span>
+                </div>
+              )}
+              <div className="flex justify-between items-end">
+                <span className="text-xs font-bold uppercase tracking-widest text-primary">{t.ui.total}</span>
+                <span className="font-display text-4xl text-primary">{total}₾</span>
+              </div>
             </div>
 
             <button
