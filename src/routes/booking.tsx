@@ -88,8 +88,7 @@ function BookingPage() {
   const servicesTotal = useMemo(
     () => Object.values(cart.services).reduce((sum, s) => {
       const q = s.quantity || 1;
-      const h = s.hours || 1;
-      return sum + s.price * q * h;
+      return sum + s.price * q;
     }, 0),
     [cart.services],
   );
@@ -423,23 +422,16 @@ function BookingPage() {
                 const sel = cart.services[s.id];
                 const active = !!sel;
                 const maxQ = s.maxQuantity ? Number(s.maxQuantity) : 1;
-                const maxH = s.maxHours ? Number(s.maxHours) : 1;
                 const hasQty = maxQ > 1;
-                const hasHours = maxH > 1;
                 const curQty = sel?.quantity || 0;
-                const curHrs = sel?.hours || 1;
 
                 const setQty = (qty: number) => {
                   const q = Math.max(0, Math.min(maxQ, qty));
-                  cart.setService({ id: s.id, name: s.name, price: s.price, quantity: q, hours: sel?.hours || 1 });
-                };
-                const setHrs = (hrs: number) => {
-                  if (!sel) return;
-                  cart.setService({ ...sel, hours: Math.max(1, Math.min(maxH, hrs)) });
+                  cart.setService({ id: s.id, name: s.name, price: s.price, quantity: q, hours: 1 });
                 };
                 const toggle = () => cart.toggleService({ id: s.id, name: s.name, price: s.price, quantity: 1, hours: 1 });
 
-                const linePrice = active ? s.price * curQty * curHrs : s.price;
+                const linePrice = active ? s.price * curQty : s.price;
 
                 return (
                   <div key={s.id} className={`p-4 rounded-2xl border-2 flex flex-col gap-3 transition-all ${active ? 'bg-primary/5 border-primary shadow-soft' : 'bg-card border-border'}`}>
@@ -463,21 +455,10 @@ function BookingPage() {
                             </div>
                           </div>
                         )}
-                        {hasHours && active && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-bold text-muted-foreground w-16">{lang === 'ka' ? 'საათი' : 'Hours'}</span>
-                            <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-                              <button onClick={() => setHrs(curHrs - 1)} className="w-6 h-6 rounded-lg hover:bg-card flex items-center justify-center"><Minus size={10} /></button>
-                              <span className="w-8 text-center font-display text-sm">{curHrs}{lang === 'ka' ? 'სთ' : 'h'}</span>
-                              <button onClick={() => setHrs(curHrs + 1)} disabled={curHrs >= maxH} className="w-6 h-6 rounded-lg hover:bg-card flex items-center justify-center disabled:opacity-30"><Plus size={10} /></button>
-                            </div>
-                            <span className="text-[9px] text-muted-foreground">max {maxH}{lang === 'ka' ? 'სთ' : 'h'}</span>
-                          </div>
-                        )}
                       </div>
                       <div className="text-right">
                         <div className="font-display text-primary font-bold">{active ? linePrice : s.price}₾</div>
-                        {active && (hasQty || hasHours) && <div className="text-[10px] text-muted-foreground">{s.price}₾ × {hasQty ? `${curQty}` : '1'}{hasHours ? ` × ${curHrs}${lang === 'ka' ? 'სთ' : 'h'}` : ''}</div>}
+                        {active && hasQty && <div className="text-[10px] text-muted-foreground">{s.price}₾ × {curQty}</div>}
                         {!hasQty && (
                           <button onClick={toggle} className={`mt-1 px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${active ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:border-primary/50'}`}>
                             {active ? (lang === 'ka' ? 'წაშლა' : 'Remove') : (lang === 'ka' ? 'დამატება' : 'Add')}
@@ -546,9 +527,8 @@ function BookingPage() {
               })}
               {Object.values(cart.services).map((s) => {
                 const q = s.quantity || 1;
-                const h = s.hours || 1;
-                const lineP = Math.round(s.price * q * h);
-                const sub = q > 1 || h > 1 ? `${s.name} ×${q}${h > 1 ? ` ·${h}${lang === 'ka' ? 'სთ' : 'h'}` : ''}` : s.name;
+                const lineP = Math.round(s.price * q);
+                const sub = q > 1 ? `${s.name} ×${q}` : s.name;
                 return (
                 <CartRow
                   key={s.id}
