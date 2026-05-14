@@ -63,6 +63,7 @@ function BookingPage() {
 
   const territoryPrice = slot?.territoryPrice || 0;
   const multiplier = slot?.multiplier || 1;
+  const programPrice = selectedProgram ? (Number(selectedProgram.pricePerHour) || 0) : 0;
 
   const animatorsTotal = useMemo(
     () => Object.values(cart.animators).reduce((sum, a) => sum + a.pricePerHour * a.quantity * a.hours * multiplier, 0),
@@ -76,7 +77,7 @@ function BookingPage() {
     }, 0),
     [cart.services],
   );
-  const total = Math.round(territoryPrice + cityFee + animatorsTotal + servicesTotal);
+  const total = Math.round(territoryPrice + cityFee + programPrice + animatorsTotal + servicesTotal);
 
   // Clear characters that exceed new program limits when program changes
   useEffect(() => {
@@ -96,12 +97,13 @@ function BookingPage() {
     const limit = isHost ? maxHosts : maxAnimators;
     const currentTotal = isHost ? totalSelectedHosts : totalSelectedAnimators;
     if (qty > currentQty && currentTotal >= limit) return;
+    const animMaxH = Math.min(a.maxHours ? Number(a.maxHours) : 24, progMaxHours);
     cart.setAnimator({
       id: a.id,
       name: a.name,
       pricePerHour: a.pricePerHour,
       image: a.image,
-      hours: existing?.hours || 2,
+      hours: Math.min(existing?.hours || 1, animMaxH),
       quantity: Math.max(0, qty),
     });
   };
@@ -504,7 +506,7 @@ function BookingPage() {
               )}
               {cart.programId && (() => {
                 const p = programs.find(pr => pr.id === cart.programId);
-                return p ? <CartRow label={t.ui.program} sub={`${p.name} · ${p.ageRange}`} price="0₾" /> : null;
+                return p ? <CartRow label={t.ui.program} sub={`${p.name} · ${p.ageRange}`} price={`${programPrice}₾`} /> : null;
               })()}
               {Object.values(cart.animators).map((a) => {
                 const isHost = hosts.some((h: any) => h.id === a.id);
