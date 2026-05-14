@@ -38,6 +38,9 @@ function BookingPage() {
   const totalSelectedHosts = Object.values(cart.animators).filter((a: any) => hosts.some((x: any) => x.id === a.id)).reduce((sum: number, a: any) => sum + (a.quantity || 0), 0);
 
   const slot = timeSlots.find((s) => s.time === cart.timeSlotTime);
+  const cities = ((assets as any)?.cities || []).filter((c: any) => c.enabled !== false) as { id: string; name: string; fee: number; enabled: boolean }[];
+  const selectedCity = cities.find((c) => c.id === cart.cityId) || null;
+  const cityFee = selectedCity?.fee || 0;
 
   // Load booked slots whenever date changes
   useEffect(() => {
@@ -73,7 +76,7 @@ function BookingPage() {
     }, 0),
     [cart.services],
   );
-  const total = Math.round(territoryPrice + animatorsTotal + servicesTotal);
+  const total = Math.round(territoryPrice + cityFee + animatorsTotal + servicesTotal);
 
   // Clear characters that exceed new program limits when program changes
   useEffect(() => {
@@ -145,6 +148,7 @@ function BookingPage() {
       animators: Object.values(cart.animators) as any,
       services: Object.values(cart.services) as any,
       total_price: total,
+      city: selectedCity ? { id: selectedCity.id, name: selectedCity.name, fee: selectedCity.fee } : null,
     } as any]);
     setSubmitting(false);
     if (error) {
@@ -285,7 +289,32 @@ function BookingPage() {
             </div>
           </Section>
 
-          {/* Step 2: Programs */}
+          {/* Step 2: City / Travel Fee */}
+          {cities.length > 0 && (
+            <Section icon={<MapPin />} title={lang === 'ka' ? 'აირჩიე ქალაქი' : 'Choose City'}>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <button
+                  onClick={() => cart.setCityId(null)}
+                  className={`p-4 rounded-2xl border-2 text-left flex flex-col gap-1 transition-all ${!cart.cityId ? 'bg-primary/10 border-primary shadow-soft' : 'bg-card border-border hover:border-primary/40'}`}
+                >
+                  <span className="text-xs font-bold text-primary">{!cart.cityId && <Check size={10} className="inline mr-1" />}{lang === 'ka' ? 'თბილისი' : 'Tbilisi'}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{lang === 'ka' ? 'მგზავრობის გარეშე' : 'No travel fee'} · 0₾</span>
+                </button>
+                {cities.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => cart.setCityId(cart.cityId === c.id ? null : c.id)}
+                    className={`p-4 rounded-2xl border-2 text-left flex flex-col gap-1 transition-all ${cart.cityId === c.id ? 'bg-primary/10 border-primary shadow-soft' : 'bg-card border-border hover:border-primary/40'}`}
+                  >
+                    <span className="text-xs font-bold text-primary">{cart.cityId === c.id && <Check size={10} className="inline mr-1" />}{c.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">{lang === 'ka' ? 'მგზავრობა' : 'Travel fee'}: +{c.fee}₾</span>
+                  </button>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Step 3: Programs */}
           <Section icon={<Users />} title={t.ui.pickProgram}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {programs.map((p) => (
@@ -464,6 +493,14 @@ function BookingPage() {
             <div className="flex flex-col gap-3 max-h-[420px] overflow-y-auto pr-1">
               {slot && (
                 <CartRow label={t.ui.territory} sub={`${slot.label} · ${slot.time} · ×${slot.multiplier}`} price={`${territoryPrice}₾`} />
+              )}
+              {selectedCity && (
+                <CartRow
+                  label={lang === 'ka' ? 'მგზავრობა' : 'Travel fee'}
+                  sub={selectedCity.name}
+                  price={`+${cityFee}₾`}
+                  onRemove={() => cart.setCityId(null)}
+                />
               )}
               {cart.programId && (() => {
                 const p = programs.find(pr => pr.id === cart.programId);

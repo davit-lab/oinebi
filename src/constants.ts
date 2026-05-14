@@ -20,6 +20,8 @@ export const ASSETS = {
   },
   // Admin-blocked time slots: { "2026-05-14": ["11:00", "16:00"] }
   blockedSlots: {} as Record<string, string[]>,
+  // Cities with travel fee. Admin-managed.
+  cities: [] as { id: string; name: string; fee: number; enabled: boolean }[],
 };
 
 export const TRANSLATIONS_VERSION = 2;

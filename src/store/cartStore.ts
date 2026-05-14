@@ -21,11 +21,13 @@ export interface CartState {
   date: string;
   timeSlotTime: string | null;
   programId: string | null;
+  cityId: string | null;
   animators: Record<string, CartAnimator>;
   services: Record<string, CartService>;
   setDate: (d: string) => void;
   setTimeSlot: (time: string | null) => void;
   setProgram: (id: string | null) => void;
+  setCityId: (id: string | null) => void;
   setAnimator: (a: CartAnimator) => void;
   removeAnimator: (id: string) => void;
   setService: (s: CartService) => void;
@@ -37,11 +39,13 @@ export const useCartStore = create<CartState>((set) => ({
   date: '',
   timeSlotTime: null,
   programId: null,
+  cityId: null,
   animators: {},
   services: {},
   setDate: (d) => set({ date: d }),
   setTimeSlot: (time) => set({ timeSlotTime: time }),
   setProgram: (id) => set({ programId: id }),
+  setCityId: (id) => set({ cityId: id }),
   setAnimator: (a) =>
     set((s) => {
       const next = { ...s.animators };
@@ -69,5 +73,5 @@ export const useCartStore = create<CartState>((set) => ({
       else next[svc.id] = { ...svc, quantity: svc.quantity || 1, hours: svc.hours || 1 };
       return { services: next };
     }),
-  clear: () => set({ date: '', timeSlotTime: null, programId: null, animators: {}, services: {} }),
+  clear: () => set({ date: '', timeSlotTime: null, programId: null, cityId: null, animators: {}, services: {} }),
 }));

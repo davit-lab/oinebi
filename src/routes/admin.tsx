@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useContentStore } from '@/store/contentStore';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, RotateCcw, Image as ImageIcon, Type, Users, Sparkles, MessageSquare, ShoppingBag, ChevronDown, Plus, Trash2, Save, Upload, Loader2, Lock, Palette, Phone, Download, Star, PartyPopper, CalendarDays, Ban, CheckCircle2 } from 'lucide-react';
+import { LogOut, RotateCcw, Image as ImageIcon, Type, Users, Sparkles, MessageSquare, ShoppingBag, ChevronDown, Plus, Trash2, Save, Upload, Loader2, Lock, Palette, Phone, Download, Star, PartyPopper, CalendarDays, Ban, CheckCircle2, MapPin } from 'lucide-react';
 import type { Language } from '@/types';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -90,7 +90,7 @@ function NotAdmin() {
   );
 }
 
-type Tab = 'bookings' | 'schedule' | 'reviews' | 'media' | 'theme' | 'contact' | 'animators' | 'hosts' | 'programs' | 'services' | 'timeslots' | 'ui' | 'faq';
+type Tab = 'bookings' | 'schedule' | 'reviews' | 'media' | 'theme' | 'contact' | 'cities' | 'animators' | 'hosts' | 'programs' | 'services' | 'timeslots' | 'ui' | 'faq';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'bookings', label: 'Bookings', icon: <ShoppingBag size={16} /> },
@@ -103,6 +103,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'hosts', label: 'Animators', icon: <Users size={16} /> },
   { id: 'programs', label: 'Programs', icon: <PartyPopper size={16} /> },
   { id: 'services', label: 'Services', icon: <Sparkles size={16} /> },
+  { id: 'cities', label: 'Cities / Travel Fee', icon: <MapPin size={16} /> },
   { id: 'timeslots', label: 'Time Slots', icon: <Type size={16} /> },
   { id: 'ui', label: 'UI Texts', icon: <Type size={16} /> },
   { id: 'faq', label: 'FAQ', icon: <MessageSquare size={16} /> },
@@ -165,6 +166,7 @@ function AdminPanel() {
           {tab === 'hosts' && <ListEditor lang={lang} field="hosts" priceKey="pricePerHour" updateTranslation={updateTranslation} translations={translations} flash={flash} />}
           {tab === 'programs' && <ListEditor lang={lang} field="programs" priceKey="pricePerHour" updateTranslation={updateTranslation} translations={translations} flash={flash} />}
           {tab === 'services' && <ListEditor lang={lang} field="services" priceKey="price" updateTranslation={updateTranslation} translations={translations} flash={flash} />}
+          {tab === 'cities' && <CitiesEditor assets={assets} update={(a) => { updateAssets(a); flash(); }} />}
           {tab === 'timeslots' && <TimeSlotsEditor lang={lang} updateTranslation={updateTranslation} translations={translations} flash={flash} />}
           {tab === 'ui' && <UITextsEditor lang={lang} updateTranslation={updateTranslation} translations={translations} flash={flash} />}
           
@@ -364,6 +366,36 @@ function UITextsEditor({ lang, translations, updateTranslation, flash }: any) {
       {Object.entries(ui).map(([k, v]) => (
         <Field key={k} label={k} value={String(v)} onChange={(val) => { updateTranslation(lang, `ui.${k}`, val); flash(); }} />
       ))}
+    </div>
+  );
+}
+
+function CitiesEditor({ assets, update }: { assets: any; update: (a: any) => void }) {
+  const cities: { id: string; name: string; fee: number; enabled: boolean }[] = assets.cities || [];
+  const set = (next: typeof cities) => update({ cities: next });
+  return (
+    <div className="flex flex-col gap-4 max-w-2xl">
+      <h2 className="text-2xl font-display">Cities &amp; Travel Fee</h2>
+      <p className="text-sm text-muted-foreground">Add cities with travel fees. Disabled cities won't appear in booking.</p>
+      {cities.map((c, i) => (
+        <div key={c.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-end p-4 rounded-2xl border border-border bg-card">
+          <Field label="City name" value={c.name} onChange={(v) => { const n = [...cities]; n[i] = { ...n[i], name: v }; set(n); }} />
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Travel Fee ₾</span>
+            <input type="number" min={0} value={c.fee} onChange={(e) => { const n = [...cities]; n[i] = { ...n[i], fee: Number(e.target.value) || 0 }; set(n); }} className="p-3 rounded-xl bg-input border border-border font-bold text-sm focus:border-primary outline-none w-24" />
+          </div>
+          <div className="flex flex-col gap-1 items-center">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</span>
+            <button onClick={() => { const n = [...cities]; n[i] = { ...n[i], enabled: !n[i].enabled }; set(n); }} className={`w-10 h-6 rounded-full transition-colors flex items-center ${c.enabled ? 'bg-primary justify-end' : 'bg-muted justify-start'}`}>
+              <span className="w-5 h-5 rounded-full bg-white shadow mx-0.5" />
+            </button>
+          </div>
+          <button onClick={() => { const n = [...cities]; n.splice(i, 1); set(n); }} className="self-end text-destructive"><Trash2 size={14} /></button>
+        </div>
+      ))}
+      <button onClick={() => set([...cities, { id: `city_${Date.now()}`, name: 'ახალი ქალაქი', fee: 0, enabled: true }])} className="self-start flex items-center gap-2 text-primary font-bold text-sm">
+        <Plus size={14} /> Add city
+      </button>
     </div>
   );
 }
